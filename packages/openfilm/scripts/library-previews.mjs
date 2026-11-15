@@ -35,9 +35,9 @@ const index = /** @type {{ items: any[] }} */ (libraryIndex());
 const asked = process.argv.slice(2);
 const ffmpeg = (...args) => { const r = spawnSync('ffmpeg', ['-v', 'error', '-y', ...args], { stdio: 'inherit' }); if (r.status !== 0) throw new Error(`ffmpeg ${args.join(' ')}`); };
 
-/** The stills of a work folder: `a` before a cut, `b` after it or under a thing. */
+/** The stills of a work folder: `a` before a cut, `b` after it or under a thing, `cinema` under an effect. */
 function stills(work) {
-  for (const s of ['a.jpg', 'b.jpg', 'c.jpg']) cpSync(join(SAMPLES, s), join(work, s));
+  for (const s of ['a.jpg', 'b.jpg', 'c.jpg', 'cinema.jpg']) cpSync(join(SAMPLES, s), join(work, s));
 }
 
 /** The film a page is drawn in: its clip over the stills, and when its picture is best seen. */
@@ -65,7 +65,9 @@ function filmFor(item, about) {
     /* with its clip's own style (a light's blend with the picture under it) */
     top = `<iframe src="${src}#t=0,2"${about.clip.style ? ` style="${about.clip.style}"` : ''}${props}></iframe>`;
     /* text on a plain ground (library-ground.mjs, as a sticker is), anything else over a still */
-    under = item.cat === 'text' ? '<iframe src="ground.html#t=0,2"></iframe>' : '<img src="b.jpg#t=0,2" style="object-fit: cover">';
+    /* an effect over a dark street, where its light and particles show */
+    const still = item.cat === 'effect' ? 'cinema.jpg' : 'b.jpg';
+    under = item.cat === 'text' ? '<iframe src="ground.html#t=0,2"></iframe>' : `<img src="${still}#t=0,2" style="object-fit: cover">`;
     /* a beat's flash is over soon after it starts */
     posterAt = item.cat === 'text' ? 1.6 : item.group === 'rhythm' ? 0.18 : 0.8;
   }
