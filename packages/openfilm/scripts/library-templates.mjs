@@ -2,8 +2,9 @@
 /**
  * The library's templates, by the definitions in library-templates.json: each a group of clips, as Saved keeps clips
  * saved together, made of the library's own things. Places for the person's pictures one after another, each its
- * example picture (files/example-<n>.jpg, made for that template and kept in its bundle; `data-slot`: which place, to
- * be replaced with their videos and photos), the transitions on their cuts, effects over all of them, and titles and
+ * example picture (files/example-<n>.jpg: the shared photo of its kind in `photos`, scripts/library-samples/<kind>.jpg,
+ * or <kind>-2.jpg the second time a template has that kind; `data-slot`: which place, to be replaced with their videos
+ * and photos), the transitions on their cuts, effects over all of them, and titles and
  * stickers each where it goes on any picture (`data-place`: its middle, and its height of the picture's, laid out as it
  * is put in). Its music is one of the library's, named in the catalog and put in with it. Put in, it plays as its
  * example until the person's own go in its places.
@@ -19,6 +20,7 @@ import { libraryIndex } from '../studio/server/library.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const LIB = join(HERE, '..', 'library');
+const PHOTOS = join(HERE, 'library-samples');
 const defs = JSON.parse(readFileSync(join(HERE, 'library-templates.json'), 'utf8'));
 const items = new Map(/** @type {{ items: any[] }} */ (libraryIndex()).items.filter((i) => i.cat !== 'template').map((i) => [i.id, i]));
 const round = (n) => Math.round(n * 1000) / 1000;
@@ -39,10 +41,8 @@ function lanes(list) {
 const catalog = [];
 for (const def of defs.templates) {
   const dir = join(LIB, 'templates', def.id);
-  /* the bundle made again, its example pictures kept */
-  const EXAMPLE = /^example-\d+\.jpg$/;
+  rmSync(join(dir, 'files'), { recursive: true, force: true });
   mkdirSync(join(dir, 'files'), { recursive: true });
-  for (const name of readdirSync(join(dir, 'files'))) if (!EXAMPLE.test(name)) rmSync(join(dir, 'files', name), { recursive: true, force: true });
   const used = new Set();
   /** whose each file in the bundle is, so two things never put different files in one place */
   const owner = new Map();
@@ -74,7 +74,11 @@ for (const def of defs.templates) {
   for (const len of def.slots) { starts.push(round(total)); total = round(total + len); }
   const slots = def.slots.map((len, i) => {
     const example = `example-${i + 1}.jpg`;
-    if (!existsSync(join(dir, 'files', example))) throw new Error(`${def.id}: no ${example} for its place ${i + 1}`);
+    const kind = def.photos?.[i];
+    const again = join(PHOTOS, `${kind}-2.jpg`);
+    const photo = def.photos.indexOf(kind) < i && existsSync(again) ? again : join(PHOTOS, `${kind}.jpg`);
+    if (!kind || !existsSync(photo)) throw new Error(`${def.id}: no photo for its place ${i + 1}`);
+    cpSync(photo, join(dir, 'files', example));
     return { at: starts[i], clip: { src: example, time: [0, len], style: 'object-fit: cover', attrs: { 'data-slot': String(i + 1) } } };
   });
 
